@@ -1,0 +1,19 @@
+---
+# ============================================================
+#  Group Variables for webservers
+#  File: ansible/group_vars/webservers.yml
+# ============================================================
+
+# Apache configuration
+apache_port: 80
+apache_document_root: /var/www/html
+apache_log_dir: /var/log/apache2
+
+# Deployment settings
+backup_enabled: true
+backup_retention_days: 7
+max_backups: 5
+
+# Notification settings (optional)
+notify_on_deploy: false
+notify_email: "devops@example.com"

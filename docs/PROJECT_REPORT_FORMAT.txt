@@ -1,0 +1,299 @@
+# ============================================================
+#  PROJECT REPORT FORMAT
+#  Automated Website Deployment Using Jenkins + Ansible
+# ============================================================
+
+══════════════════════════════════════════════════
+  TITLE PAGE
+══════════════════════════════════════════════════
+
+  [COLLEGE LOGO]
+
+  PROJECT REPORT
+
+  Automated Website Deployment Using Jenkins and Ansible
+
+  Submitted in partial fulfillment of the requirements for the
+  degree of Bachelor of Engineering / B.Tech in
+  Computer Science & Engineering
+
+  Submitted by:
+  [Student Name]           [Roll Number]
+  [Student Name]           [Roll Number]
+
+  Under the guidance of:
+  [Professor Name]
+  Department of Computer Science & Engineering
+
+  [College Name]
+  [University Name]
+  [Academic Year: 2024–25]
+
+══════════════════════════════════════════════════
+  DECLARATION
+══════════════════════════════════════════════════
+
+  We hereby declare that the project work entitled "Automated Website
+  Deployment Using Jenkins and Ansible" is our own work and has been
+  carried out by us at [College Name], under the guidance of [Guide Name].
+
+  We declare that the work presented in this project is genuine and
+  has not been submitted to any other University or Institution for
+  the award of any degree or diploma.
+
+  Place: [City]        Date: [Date]
+  Signature: ________________
+
+══════════════════════════════════════════════════
+  CERTIFICATE
+══════════════════════════════════════════════════
+
+  [Internal Guide Signature Block]
+  [HOD Signature Block]
+  [External Examiner Block]
+
+══════════════════════════════════════════════════
+  ABSTRACT (300–400 words)
+══════════════════════════════════════════════════
+
+  In modern software development, the ability to rapidly and reliably
+  deploy code changes is a critical competitive advantage. This project
+  implements an automated Continuous Integration and Continuous
+  Deployment (CI/CD) pipeline for website deployment using Jenkins and
+  Ansible on Ubuntu Linux.
+
+  The system automates the complete software delivery lifecycle: from
+  the moment a developer pushes code to a GitHub repository, through
+  automated testing and validation, to deployment on an Apache web
+  server — without any manual intervention. The pipeline leverages
+  Jenkins as the CI/CD orchestration engine and Ansible as the
+  configuration management and deployment automation tool.
+
+  GitHub webhooks provide instant notification to Jenkins upon code
+  push, triggering a five-stage pipeline: code checkout, validation,
+  testing, Ansible-driven deployment, and verification. Ansible uses
+  SSH key-based passwordless authentication to securely connect to
+  the deployment server, copies website files to the Apache web root
+  (/var/www/html), and automatically restarts the web service.
+
+  The project demonstrates deployment across multiple environments
+  including local VirtualBox VMs, AWS EC2, and Azure VMs. Advanced
+  features including Docker containerization, multi-server deployment,
+  and automated rollback strategies are also implemented.
+
+  The result is a fully automated, repeatable, and auditable deployment
+  pipeline that reduces deployment time from 15 minutes (manual) to
+  under 60 seconds, eliminates human error, and provides complete
+  audit trails through Jenkins build logs.
+
+  Keywords: CI/CD, DevOps, Jenkins, Ansible, Apache, GitHub Webhooks,
+  Automation, Configuration Management, Agentless Deployment
+
+══════════════════════════════════════════════════
+  TABLE OF CONTENTS
+══════════════════════════════════════════════════
+
+  Chapter 1: Introduction ................................. 1
+    1.1 Problem Statement
+    1.2 Project Objectives
+    1.3 Scope of the Project
+    1.4 Organization of Report
+
+  Chapter 2: Literature Survey ........................... 8
+    2.1 Existing Systems
+    2.2 Related Work
+    2.3 Proposed System
+
+  Chapter 3: System Analysis & Design ................... 15
+    3.1 System Architecture
+    3.2 Architecture Diagram
+    3.3 Workflow Diagram
+    3.4 Technology Stack
+    3.5 System Requirements
+
+  Chapter 4: Implementation ............................. 25
+    4.1 Jenkins Server Setup
+    4.2 Ansible Configuration
+    4.3 SSH Key Authentication
+    4.4 GitHub Webhook Configuration
+    4.5 Jenkinsfile Pipeline
+    4.6 Ansible Playbook (deploy.yml)
+    4.7 Website Development
+    4.8 Apache Web Server Configuration
+
+  Chapter 5: Results & Screenshots ...................... 45
+    5.1 Jenkins Dashboard
+    5.2 Pipeline Stages View
+    5.3 Ansible Execution Output
+    5.4 Deployed Website
+    5.5 Build History
+
+  Chapter 6: Testing ................................... 55
+    6.1 Unit Testing
+    6.2 Integration Testing
+    6.3 End-to-End Testing
+    6.4 Test Results
+
+  Chapter 7: Advanced Features ......................... 60
+    7.1 Docker Deployment
+    7.2 Multi-Server Deployment
+    7.3 Rollback Strategy
+    7.4 Blue-Green Deployment
+
+  Chapter 8: Conclusion & Future Work .................. 68
+    8.1 Conclusion
+    8.2 Limitations
+    8.3 Future Enhancements
+
+  References ........................................... 72
+  Appendix ............................................. 74
+
+══════════════════════════════════════════════════
+  SCREENSHOT LOCATIONS (for Report Writing)
+══════════════════════════════════════════════════
+
+  📸 SCREENSHOT 1: Jenkins Dashboard
+     Where to take: http://JENKINS_IP:8080
+     Shows: All jobs, build queue, build history
+
+  📸 SCREENSHOT 2: Jenkins Pipeline Stages
+     Where to take: Click on build → Stage View
+     Shows: Each stage (Checkout, Validate, Test, Deploy, Verify)
+            with timing and status (green=pass, red=fail)
+
+  📸 SCREENSHOT 3: Jenkins Console Output
+     Where to take: Build → Console Output
+     Shows: Detailed logs of every command run, Ansible output
+
+  📸 SCREENSHOT 4: GitHub Repository
+     Where to take: github.com/YOUR_USERNAME/YOUR_REPO
+     Shows: Repository with Jenkinsfile, ansible folder, website folder
+
+  📸 SCREENSHOT 5: GitHub Webhook Configuration
+     Where to take: GitHub Repo → Settings → Webhooks
+     Shows: Webhook URL, recent deliveries, green checkmarks
+
+  📸 SCREENSHOT 6: GitHub Webhook Delivery
+     Where to take: Settings → Webhooks → Recent Deliveries
+     Shows: HTTP 200 response from Jenkins (success)
+
+  📸 SCREENSHOT 7: Ansible Execution in Jenkins Log
+     Where to take: Console Output → scroll to Deploy stage
+     Shows: PLAY RECAP with ok, changed, failed counts
+
+  📸 SCREENSHOT 8: Deployed Website Live
+     Where to take: http://DEPLOYMENT_SERVER_IP
+     Shows: Your website running on Apache
+
+  📸 SCREENSHOT 9: Terminal showing SSH keygen
+     Where to take: Terminal on Jenkins server
+     Command: ssh-keygen -t rsa -b 4096
+     Shows: Key generation process
+
+  📸 SCREENSHOT 10: Ansible Ping Test
+     Where to take: Terminal
+     Command: ansible webservers -i inventory.ini -m ping
+     Shows: SUCCESS | pong response
+
+  📸 SCREENSHOT 11: Apache Status on Server
+     Where to take: Deployment server terminal
+     Command: sudo systemctl status apache2
+     Shows: Active (running) in green
+
+  📸 SCREENSHOT 12: Project Folder Structure
+     Where to take: VS Code or terminal
+     Command: tree devops-project/ (or ls -la)
+     Shows: All project files organized
+
+══════════════════════════════════════════════════
+  ARCHITECTURE DIAGRAM DESCRIPTION
+══════════════════════════════════════════════════
+
+  Draw this diagram (use draw.io or PowerPoint):
+
+  ┌─────────────────────────────────────────────────┐
+  │                  DEVELOPER MACHINE               │
+  │  ┌──────────┐                                   │
+  │  │ VS Code  │  git push                         │
+  │  │ (Code)   │────────────────────────────────┐  │
+  └──┴──────────┘                                │  │
+                                                 ▼  │
+  ┌──────────────────┐     Webhook      ┌─────────────────┐
+  │   GITHUB.COM     │ ─────────────►  │  JENKINS SERVER │
+  │                  │                  │  (Ubuntu VM)    │
+  │  Source Code     │                  │                 │
+  │  Repository      │◄─ git pull ──── │  Jenkins:8080   │
+  └──────────────────┘                  │  Ansible        │
+                                        │  Python 3       │
+                                        └────────┬────────┘
+                                                 │
+                                    SSH (Ansible Playbook)
+                                                 │
+                                                 ▼
+                                    ┌────────────────────┐
+                                    │  DEPLOYMENT SERVER │
+                                    │  (Ubuntu VM/EC2)   │
+                                    │                    │
+                                    │  Apache2           │
+                                    │  /var/www/html/    │
+                                    │  Port 80           │
+                                    └─────────┬──────────┘
+                                              │
+                                    HTTP (Port 80)
+                                              │
+                                              ▼
+                                    ┌──────────────────┐
+                                    │   END USERS      │
+                                    │  (Web Browser)   │
+                                    └──────────────────┘
+
+══════════════════════════════════════════════════
+  RESUME DESCRIPTION
+══════════════════════════════════════════════════
+
+  Use this in your resume under "Projects":
+
+  ─────────────────────────────────────────────────
+  Automated Website Deployment | Jenkins, Ansible, Apache
+  [Month Year] – [Month Year]
+  ─────────────────────────────────────────────────
+  • Built an end-to-end CI/CD pipeline using Jenkins and Ansible that
+    automatically deploys a responsive website to an Apache web server
+    upon every GitHub push event, reducing deployment time by 95%
+    (from 15 minutes manual to under 60 seconds).
+
+  • Configured GitHub webhooks to trigger Jenkins pipelines instantly
+    on code commit, eliminating manual intervention in the deployment
+    workflow.
+
+  • Implemented Ansible playbooks for zero-downtime configuration
+    management: automated Apache2 installation, file deployment to
+    /var/www/html, permission management, and service restart.
+
+  • Deployed and tested the pipeline across Local VirtualBox VMs,
+    AWS EC2 (t2.micro), and Azure VMs with environment-specific
+    Ansible inventory configurations.
+
+  • Implemented a Jenkinsfile-based declarative pipeline with 5 stages
+    (Checkout, Validate, Test, Deploy, Verify) and automated rollback
+    using timestamped archive backups.
+
+  • Optional: Containerized the application using Docker and implemented
+    multi-server deployment and Blue-Green deployment strategy.
+
+  Tech Stack: Ubuntu 22.04, Git/GitHub, Jenkins, Ansible, Apache2,
+  HTML/CSS/JavaScript, Docker (optional), AWS EC2, Azure VM
+
+══════════════════════════════════════════════════
+  REFERENCES
+══════════════════════════════════════════════════
+
+  [1] Jenkins Documentation — https://www.jenkins.io/doc/
+  [2] Ansible Documentation — https://docs.ansible.com/
+  [3] Apache HTTP Server — https://httpd.apache.org/docs/
+  [4] GitHub Webhooks Guide — https://docs.github.com/webhooks
+  [5] Docker Documentation — https://docs.docker.com/
+  [6] Kim, G., Humble, J., Debois, P. & Willis, J. (2016).
+      "The DevOps Handbook". IT Revolution Press.
+  [7] Humble, J. & Farley, D. (2010).
+      "Continuous Delivery". Addison-Wesley.

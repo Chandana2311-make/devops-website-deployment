@@ -1,0 +1,397 @@
+# ============================================================
+#  COMPLETE INSTALLATION & SETUP GUIDE
+#  Project: Automated Website Deployment — Jenkins + Ansible
+# ============================================================
+
+═══════════════════════════════════════════════════════════════
+  SECTION 1: SYSTEM REQUIREMENTS & PREREQUISITES
+═══════════════════════════════════════════════════════════════
+
+Minimum Requirements:
+  ┌────────────────┬───────────────────────────────────┐
+  │ Component      │ Requirement                       │
+  ├────────────────┼───────────────────────────────────┤
+  │ OS             │ Ubuntu 20.04 / 22.04 LTS          │
+  │ RAM            │ 2 GB minimum (4 GB recommended)   │
+  │ Storage        │ 20 GB free space                  │
+  │ Network        │ Internet access, static/known IP  │
+  │ Java           │ JDK 11 or 17                      │
+  └────────────────┴───────────────────────────────────┘
+
+Servers Needed:
+  • Jenkins Server (also runs Ansible)  → IP: 192.168.1.50
+  • Deployment Server (Apache)          → IP: 192.168.1.100
+
+═══════════════════════════════════════════════════════════════
+  SECTION 2: JENKINS SERVER SETUP
+═══════════════════════════════════════════════════════════════
+
+── STEP 1: Update System ──────────────────────────────────────
+  sudo apt update && sudo apt upgrade -y
+
+  # WHY: Always update package lists before installing anything.
+  # This ensures you get the latest stable versions.
+
+── STEP 2: Install Java (Required by Jenkins) ────────────────
+  sudo apt install -y openjdk-17-jdk openjdk-17-jre
+
+  # Verify Java is installed:
+  java -version
+  # Expected output: openjdk version "17.x.x"
+
+  # WHY: Jenkins is a Java application. Without Java, it cannot run.
+
+── STEP 3: Install Jenkins ───────────────────────────────────
+  # Add Jenkins GPG key (for package verification):
+  curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
+    | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+
+  # Add Jenkins repository to apt sources:
+  echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+    https://pkg.jenkins.io/debian-stable binary/" \
+    | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+  # Update package list and install Jenkins:
+  sudo apt update
+  sudo apt install -y jenkins
+
+  # WHY: We add the official Jenkins repo to get the latest stable version,
+  # not the outdated one in Ubuntu's default repos.
+
+── STEP 4: Start Jenkins ─────────────────────────────────────
+  sudo systemctl start jenkins
+  sudo systemctl enable jenkins    # Auto-start on reboot
+  sudo systemctl status jenkins    # Verify it's running
+
+  # Expected output should show: Active: active (running)
+
+── STEP 5: Open Jenkins in Browser ──────────────────────────
+  # Jenkins runs on port 8080 by default:
+  # http://YOUR_SERVER_IP:8080
+
+  # Get the initial admin password:
+  sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+  # Copy this password and paste it into the web browser setup.
+  # WHY: Jenkins locks itself with a secret password on first run for security.
+
+── STEP 6: Jenkins Web Setup ────────────────────────────────
+  1. Open http://YOUR_SERVER_IP:8080 in browser
+  2. Paste the admin password from Step 5
+  3. Click "Install suggested plugins" (wait ~5 minutes)
+  4. Create your admin user account
+  5. Set Jenkins URL → http://YOUR_SERVER_IP:8080/
+  6. Click "Save and Finish"
+
+  # Plugins to additionally install (Manage Jenkins → Plugins):
+  #   - GitHub Integration Plugin
+  #   - GitHub plugin
+  #   - Ansible plugin (optional, for better integration)
+  #   - Pipeline plugin (usually pre-installed)
+
+── STEP 7: Configure Jenkins Firewall ───────────────────────
+  sudo ufw allow 8080/tcp    # Jenkins web UI
+  sudo ufw allow 22/tcp      # SSH (don't lock yourself out!)
+  sudo ufw allow 80/tcp      # Website port
+  sudo ufw enable
+  sudo ufw status
+
+  # WHY: Ubuntu's firewall (ufw) blocks ports by default.
+  # We must explicitly allow Jenkins port 8080 and SSH port 22.
+
+═══════════════════════════════════════════════════════════════
+  SECTION 3: ANSIBLE SETUP (on Jenkins Server)
+═══════════════════════════════════════════════════════════════
+
+── STEP 8: Install Ansible ───────────────────────────────────
+  sudo apt install -y software-properties-common
+  sudo add-apt-repository --yes --update ppa:ansible/ansible
+  sudo apt install -y ansible
+
+  # Verify installation:
+  ansible --version
+  # Expected: ansible [core 2.x.x]
+
+  # WHY: Ansible is our deployment automation tool. It connects to the
+  # web server via SSH and copies files, configures Apache, etc.
+
+── STEP 9: Install Ansible Dependencies ─────────────────────
+  # Install community collections (for Docker module if needed):
+  ansible-galaxy collection install community.docker
+  ansible-galaxy collection install community.general
+
+  # WHY: Ansible core doesn't include all modules. Collections extend its capabilities.
+
+═══════════════════════════════════════════════════════════════
+  SECTION 4: SSH PASSWORDLESS AUTHENTICATION
+═══════════════════════════════════════════════════════════════
+
+WHY THIS IS NEEDED:
+  Jenkins runs Ansible, which uses SSH to connect to the deployment
+  server. Without passwordless SSH, Ansible would prompt for a password
+  and the automated pipeline would hang/fail.
+
+── STEP 10: Generate SSH Key Pair on Jenkins Server ─────────
+  # Switch to jenkins user:
+  sudo su - jenkins
+
+  # Generate SSH key pair (press Enter 3 times for defaults — no passphrase):
+  ssh-keygen -t rsa -b 4096 -C "jenkins@cicd"
+  # Files created:
+  #   ~/.ssh/id_rsa       (PRIVATE key — keep secret!)
+  #   ~/.ssh/id_rsa.pub   (PUBLIC key — share this)
+
+  # View the public key:
+  cat ~/.ssh/id_rsa.pub
+  # Copy the entire output — you'll need it next
+
+── STEP 11: Copy Public Key to Deployment Server ────────────
+  # Method 1: Automated (recommended):
+  ssh-copy-id ubuntu@192.168.1.100
+  # Enter the deployment server's password once — never again!
+
+  # Method 2: Manual (if ssh-copy-id not available):
+  # On deployment server, append Jenkins public key:
+  # echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+  # chmod 600 ~/.ssh/authorized_keys
+
+── STEP 12: Test SSH Connection ─────────────────────────────
+  # Still as jenkins user, test the connection:
+  ssh ubuntu@192.168.1.100
+
+  # You should connect WITHOUT being asked for a password!
+  # If it connects → passwordless SSH is working ✅
+  # If it asks for password → troubleshoot ~/.ssh/ permissions
+
+  # Test with Ansible ping:
+  ansible webservers -i /path/to/inventory.ini -m ping
+  # Expected: 192.168.1.100 | SUCCESS => {"ping": "pong"}
+
+  exit   # Return to your normal user
+
+── STEP 13: Add SSH Key to Jenkins Credentials ──────────────
+  1. Go to: Jenkins → Manage Jenkins → Credentials
+  2. Click: (global) → Add Credentials
+  3. Kind: SSH Username with private key
+  4. ID: deployment-server-ssh
+  5. Username: ubuntu
+  6. Private Key: Enter directly → paste contents of:
+       sudo cat /var/lib/jenkins/.ssh/id_rsa
+  7. Click Save
+
+  # WHY: Jenkins stores credentials securely. The Jenkinsfile references
+  # them by ID, so the actual key is never visible in code.
+
+═══════════════════════════════════════════════════════════════
+  SECTION 5: DEPLOYMENT SERVER SETUP (Apache)
+═══════════════════════════════════════════════════════════════
+
+── STEP 14: Setup Deployment Server ─────────────────────────
+  # On the DEPLOYMENT server (not Jenkins server):
+
+  sudo apt update && sudo apt upgrade -y
+
+  # Install Apache2:
+  sudo apt install -y apache2
+
+  # Start and enable Apache:
+  sudo systemctl start apache2
+  sudo systemctl enable apache2
+  sudo systemctl status apache2
+
+  # Allow HTTP through firewall:
+  sudo ufw allow 80/tcp
+  sudo ufw allow 22/tcp
+  sudo ufw enable
+
+  # Test Apache is working:
+  curl http://localhost
+  # Should return default Apache HTML page
+
+  # WHY: Apache2 is the web server that will serve our website files.
+  # It serves files from /var/www/html by default.
+
+── STEP 15: Set Directory Permissions ───────────────────────
+  # Allow www-data (Apache user) to own web root:
+  sudo chown -R www-data:www-data /var/www/html
+  sudo chmod -R 755 /var/www/html
+
+  # Add ubuntu user to www-data group (so Ansible can write files):
+  sudo usermod -aG www-data ubuntu
+
+  # WHY: Ansible connects as 'ubuntu' user. It needs permission to
+  # copy files into /var/www/html. Adding to www-data group allows this.
+
+═══════════════════════════════════════════════════════════════
+  SECTION 6: GITHUB REPOSITORY SETUP
+═══════════════════════════════════════════════════════════════
+
+── STEP 16: Create GitHub Repository ────────────────────────
+  1. Go to https://github.com → New Repository
+  2. Name: devops-website-deployment
+  3. Description: Jenkins + Ansible CI/CD Pipeline
+  4. Visibility: Public (easier for webhooks)
+  5. Initialize with README: Yes
+  6. Click "Create repository"
+
+── STEP 17: Push Project Code ───────────────────────────────
+  # On your local machine (or Jenkins server), in project folder:
+  git init
+  git add .
+  git commit -m "Initial commit: DevOps website project"
+  git branch -M main
+  git remote add origin https://github.com/YOUR_USERNAME/devops-website-deployment.git
+  git push -u origin main
+
+  # WHY: GitHub stores our code. Jenkins will pull from here on every push.
+
+── STEP 18: Configure GitHub Webhook ────────────────────────
+  # A webhook tells GitHub to notify Jenkins whenever code is pushed.
+
+  1. Go to your GitHub repo → Settings → Webhooks
+  2. Click "Add webhook"
+  3. Payload URL: http://YOUR_JENKINS_IP:8080/github-webhook/
+     (Note the trailing slash — it's important!)
+  4. Content type: application/json
+  5. Secret: (leave blank for now, or add a secret for security)
+  6. Events: Select "Just the push event"
+  7. Active: ✅ checked
+  8. Click "Add webhook"
+
+  # Test the webhook:
+  # Make a small change, git add, git commit, git push
+  # Watch Jenkins automatically start a build!
+
+  # WHY: Without a webhook, Jenkins would only detect changes by
+  # polling GitHub every minute. Webhooks make it instant.
+
+═══════════════════════════════════════════════════════════════
+  SECTION 7: JENKINS JOB CONFIGURATION
+═══════════════════════════════════════════════════════════════
+
+── STEP 19A: Create Freestyle Project ──────────────────────
+  1. Jenkins Dashboard → New Item
+  2. Name: "website-deploy-freestyle"
+  3. Type: Freestyle project → OK
+
+  SOURCE CODE MANAGEMENT:
+    - Git
+    - Repository URL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    - Branch: */main
+
+  BUILD TRIGGERS:
+    - ✅ GitHub hook trigger for GITScm polling
+
+  BUILD STEPS → Add build step → Execute shell:
+    cd ansible
+    ansible-playbook -i inventory.ini deploy.yml -v
+
+  POST-BUILD ACTIONS:
+    - Archive the artifacts: website/**/*
+
+  → Click SAVE
+
+── STEP 19B: Create Pipeline Project (Jenkinsfile) ─────────
+  1. Jenkins Dashboard → New Item
+  2. Name: "website-deploy-pipeline"
+  3. Type: Pipeline → OK
+
+  BUILD TRIGGERS:
+    - ✅ GitHub hook trigger for GITScm polling
+
+  PIPELINE:
+    - Definition: Pipeline script from SCM
+    - SCM: Git
+    - Repository URL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    - Branch: */main
+    - Script Path: Jenkinsfile
+
+  → Click SAVE
+
+  # WHY Pipeline over Freestyle?
+  # Jenkinsfile is code (version controlled), shows stage visualization,
+  # easier to maintain, supports parallel stages and conditions.
+
+─── STEP 20: Run First Build Manually ───────────────────────
+  1. Click on your job → "Build Now"
+  2. Click the build number → "Console Output"
+  3. Watch each stage execute in real time
+  4. Green checkmark = success ✅
+  5. Open http://DEPLOYMENT_SERVER_IP in browser → Website should be live!
+
+═══════════════════════════════════════════════════════════════
+  SECTION 8: DEPLOY ON DIFFERENT ENVIRONMENTS
+═══════════════════════════════════════════════════════════════
+
+── AWS EC2 Deployment ───────────────────────────────────────
+  1. Log into AWS Console → EC2 → Launch Instance
+  2. AMI: Ubuntu Server 22.04 LTS (Free Tier eligible)
+  3. Instance Type: t2.micro (Free Tier)
+  4. Key Pair: Create new → download .pem file
+  5. Security Group — Allow inbound:
+       - Port 22  (SSH)    — Your IP
+       - Port 80  (HTTP)   — Anywhere (0.0.0.0/0)
+       - Port 8080 (Jenkins) — Your IP (for Jenkins server)
+  6. Launch Instance
+
+  # Connect to EC2:
+  chmod 400 your-key.pem
+  ssh -i your-key.pem ubuntu@EC2_PUBLIC_IP
+
+  # In inventory.ini, update:
+  webserver1 ansible_host=EC2_PUBLIC_IP ansible_user=ubuntu \
+    ansible_ssh_private_key_file=~/.ssh/your-key.pem
+
+── Azure VM Deployment ──────────────────────────────────────
+  1. Azure Portal → Virtual Machines → Create
+  2. Image: Ubuntu Server 22.04 LTS
+  3. Size: B1s (1 vCPU, 1 GB RAM — Free Tier)
+  4. Authentication: SSH public key
+  5. Inbound ports: SSH (22), HTTP (80), 8080
+  6. Download the SSH key
+
+  # Connect to Azure VM:
+  ssh -i azure-key.pem azureuser@AZURE_PUBLIC_IP
+
+  # In inventory.ini, update:
+  webserver1 ansible_host=AZURE_PUBLIC_IP ansible_user=azureuser \
+    ansible_ssh_private_key_file=~/.ssh/azure-key.pem
+
+── Local VM Deployment ──────────────────────────────────────
+  1. Install VirtualBox: https://www.virtualbox.org/
+  2. Download Ubuntu 22.04 ISO
+  3. Create VM: 2 CPU, 2 GB RAM, 20 GB disk
+  4. Network: Bridged Adapter (so VMs can talk to each other)
+  5. Install Ubuntu, set static IP or note DHCP IP
+  6. Update inventory.ini with the VM's IP address
+
+═══════════════════════════════════════════════════════════════
+  SECTION 9: VERIFICATION COMMANDS
+═══════════════════════════════════════════════════════════════
+
+  # Check Jenkins status:
+  sudo systemctl status jenkins
+
+  # Check Apache status:
+  sudo systemctl status apache2
+
+  # Test Ansible connection:
+  ansible webservers -i ansible/inventory.ini -m ping
+
+  # Run playbook with verbose output:
+  ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -vvv
+
+  # Check what files are deployed:
+  ansible webservers -i ansible/inventory.ini -m shell \
+    -a "ls -la /var/www/html/"
+
+  # Test website from command line:
+  curl -I http://DEPLOYMENT_SERVER_IP
+  # Should return: HTTP/1.1 200 OK
+
+  # Check Jenkins logs:
+  sudo journalctl -u jenkins -f
+
+  # Check Apache error logs on deployment server:
+  sudo tail -f /var/log/apache2/error.log
+  sudo tail -f /var/log/apache2/access.log

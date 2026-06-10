@@ -1,0 +1,81 @@
+---
+# ============================================================
+#  Ansible Playbook — Rollback to Previous Deployment
+#  File: ansible/rollback.yml
+#  Usage: ansible-playbook -i inventory.ini rollback.yml
+#         ansible-playbook -i inventory.ini rollback.yml \
+#           --extra-vars "rollback_build=40"
+# ============================================================
+
+- name: "⏮️  Rollback Website Deployment"
+  hosts: webservers
+  become: yes
+  gather_facts: yes
+
+  vars:
+    web_root: /var/www/html
+    backup_dir: /var/backups/website
+    rollback_build: "latest"   # Override with --extra-vars
+
+  tasks:
+
+    - name: "📋 List available backups"
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "*.tar.gz"
+        file_type: file
+      register: backups
+
+    - name: "📋 Show available backups"
+      debug:
+        msg: "{{ backups.files | map(attribute='path') | list | sort }}"
+
+    - name: "🔍 Find latest backup"
+      set_fact:
+        latest_backup: "{{ backups.files | sort(attribute='mtime') | last }}"
+      when: rollback_build == "latest" and backups.files | length > 0
+
+    - name: "🔍 Find specific build backup"
+      set_fact:
+        target_backup: "{{ backups.files | selectattr('path', 'search', rollback_build) | list | first }}"
+      when: rollback_build != "latest"
+
+    - name: "🧹 Clean current web root"
+      file:
+        path: "{{ web_root }}"
+        state: "{{ item }}"
+      loop:
+        - absent
+        - directory
+      when: latest_backup is defined or target_backup is defined
+
+    - name: "📦 Restore from latest backup"
+      unarchive:
+        src: "{{ latest_backup.path }}"
+        dest: "/"
+        remote_src: yes
+      when: rollback_build == "latest" and latest_backup is defined
+
+    - name: "📦 Restore from specific build backup"
+      unarchive:
+        src: "{{ target_backup.path }}"
+        dest: "/"
+        remote_src: yes
+      when: rollback_build != "latest" and target_backup is defined
+
+    - name: "🔐 Fix permissions after restore"
+      file:
+        path: "{{ web_root }}"
+        owner: www-data
+        group: www-data
+        mode: '0755'
+        recurse: yes
+
+    - name: "🔄 Restart Apache after rollback"
+      systemd:
+        name: apache2
+        state: restarted
+
+    - name: "✅ Rollback complete"
+      debug:
+        msg: "Rollback successful! Website restored."

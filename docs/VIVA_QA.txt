@@ -1,0 +1,360 @@
+# ============================================================
+#  VIVA QUESTIONS & ANSWERS
+#  Project: Automated Website Deployment — Jenkins + Ansible
+# ============================================================
+
+═══════════════════════════════════════════════════════════════
+  SECTION A: BASIC / INTRODUCTORY QUESTIONS
+═══════════════════════════════════════════════════════════════
+
+Q1. What is CI/CD? What does it stand for?
+──────────────────────────────────────────
+  CI/CD stands for Continuous Integration and Continuous Deployment
+  (or Continuous Delivery).
+
+  • Continuous Integration (CI): The practice of automatically building
+    and testing code every time a developer pushes to a shared repository.
+    It catches bugs early and ensures the codebase is always in a
+    working state.
+
+  • Continuous Deployment (CD): Automatically deploying code that passes
+    all tests to the production server without any manual intervention.
+
+  In this project: Developer pushes code to GitHub (CI triggers) →
+  Jenkins builds and tests → Ansible deploys to Apache (CD completes).
+
+──────────────────────────────────────────────────────────────
+
+Q2. What is Jenkins and why did you use it?
+────────────────────────────────────────────
+  Jenkins is an open-source automation server written in Java. It is
+  the most widely-used CI/CD tool in the industry.
+
+  Why Jenkins:
+  • Free and open-source
+  • Over 1,800 plugins for integrations
+  • Supports both Freestyle and Pipeline (Jenkinsfile) jobs
+  • Can integrate with GitHub via webhooks
+  • Has a web-based UI for monitoring builds
+  • Runs on any platform with Java
+
+  In our project, Jenkins polls/receives GitHub webhooks, pulls the
+  latest code, runs validation, and triggers Ansible to deploy.
+
+──────────────────────────────────────────────────────────────
+
+Q3. What is Ansible? Why is it called "agentless"?
+───────────────────────────────────────────────────
+  Ansible is an open-source IT automation tool used for configuration
+  management, application deployment, and task automation.
+
+  Agentless means: Unlike tools like Chef or Puppet, Ansible does NOT
+  require you to install any software (agent) on the target/managed
+  servers. It connects to remote servers using standard SSH and runs
+  tasks using Python (which is already on most Linux servers).
+
+  Benefits:
+  • Simple YAML-based playbooks (human-readable)
+  • No agent to maintain or patch
+  • Idempotent — running the same playbook twice is safe
+  • Connects via SSH (already available on Ubuntu)
+
+──────────────────────────────────────────────────────────────
+
+Q4. What is a Jenkins Pipeline? What is a Jenkinsfile?
+───────────────────────────────────────────────────────
+  A Jenkins Pipeline is a suite of plugins that supports implementing
+  and integrating continuous delivery pipelines into Jenkins.
+
+  A Jenkinsfile is a text file written in Groovy DSL (Domain Specific
+  Language) that defines the pipeline stages. It is stored in the
+  root of your repository alongside your code.
+
+  Advantages of Jenkinsfile:
+  • Pipeline-as-Code: Version controlled with your project
+  • Durable: Survives Jenkins restarts
+  • Visualized: Each stage shown graphically in Jenkins UI
+  • Auditable: Full history of pipeline changes
+
+  Our Jenkinsfile has 5 stages: Checkout → Validate → Test → Deploy → Verify
+
+──────────────────────────────────────────────────────────────
+
+Q5. What is a GitHub Webhook?
+──────────────────────────────
+  A webhook is an HTTP callback — a way for GitHub to send an automatic
+  notification (HTTP POST request) to another service (Jenkins) when
+  a specific event occurs.
+
+  When a developer does: git push → GitHub fires a POST request to
+  the configured webhook URL (http://JENKINS_IP:8080/github-webhook/)
+  → Jenkins receives this notification → Jenkins starts a new build.
+
+  Without webhooks, Jenkins would need to poll GitHub every minute
+  by asking "Any new commits?" — wasteful and adds a delay.
+  With webhooks: Jenkins is notified instantly, within seconds.
+
+──────────────────────────────────────────────────────────────
+
+Q6. What is an Ansible Playbook?
+──────────────────────────────────
+  An Ansible Playbook is a YAML file that describes a set of tasks
+  to be executed on remote hosts. It is the main configuration file
+  in Ansible.
+
+  Key components of our deploy.yml:
+  • hosts: which servers to target (webservers)
+  • become: yes → run tasks with sudo
+  • vars: variables like web_root path
+  • pre_tasks: runs before main tasks (update apt cache)
+  • tasks: the actual steps (install apache, copy files)
+  • handlers: triggered only when a task changes state (restart apache)
+  • post_tasks: verification after deployment
+
+──────────────────────────────────────────────────────────────
+
+Q7. What is an Ansible Inventory file?
+───────────────────────────────────────
+  The inventory file (inventory.ini) lists all the target servers
+  that Ansible manages, grouped by their role.
+
+  In our project:
+  [webservers]          ← Group name
+  webserver1 ansible_host=192.168.1.100  ← Server with its IP
+  
+  Groups allow running playbooks on specific sets of servers.
+  Variables can be set per-host or per-group.
+
+═══════════════════════════════════════════════════════════════
+  SECTION B: INTERMEDIATE QUESTIONS
+═══════════════════════════════════════════════════════════════
+
+Q8. Explain the complete workflow of your project.
+──────────────────────────────────────────────────
+  Step 1: Developer writes/modifies website code on local machine
+  Step 2: git add → git commit → git push to GitHub repository
+  Step 3: GitHub fires a webhook HTTP POST to Jenkins URL
+  Step 4: Jenkins receives the webhook, starts a new build
+  Step 5: Jenkins pulls latest code from GitHub (git checkout)
+  Step 6: Jenkins runs validation — checks files exist, HTML syntax
+  Step 7: Jenkins runs Ansible syntax check (dry run) for testing
+  Step 8: Jenkins executes: ansible-playbook deploy.yml
+  Step 9: Ansible SSHes into the Apache server
+  Step 10: Ansible installs/verifies Apache2 is installed
+  Step 11: Ansible copies website files to /var/www/html/
+  Step 12: Ansible sets correct file ownership (www-data)
+  Step 13: Ansible restarts Apache2 service
+  Step 14: Ansible verifies website returns HTTP 200
+  Step 15: Jenkins marks build as SUCCESS, archives artifacts
+  Step 16: Website is live at http://SERVER_IP
+
+──────────────────────────────────────────────────────────────
+
+Q9. What is passwordless SSH and why is it needed?
+───────────────────────────────────────────────────
+  Passwordless SSH uses SSH key pairs (public/private key cryptography)
+  to authenticate without typing a password.
+
+  How it works:
+  1. Generate key pair: ssh-keygen creates id_rsa (private) + id_rsa.pub (public)
+  2. Copy public key to server: ~/.ssh/authorized_keys on target server
+  3. SSH connection: Client proves identity using private key
+     (without ever sending the password over network)
+
+  Why needed in this project:
+  • Jenkins runs Ansible in automated pipelines — there is no human
+    present to type a password
+  • Without it, Ansible would hang waiting for password input
+  • Makes the pipeline truly automated (no manual intervention)
+
+──────────────────────────────────────────────────────────────
+
+Q10. What is idempotency in Ansible? Give an example.
+─────────────────────────────────────────────────────
+  Idempotency means running an operation multiple times produces the
+  same result as running it once. The state remains the same.
+
+  Example in our deploy.yml:
+    - name: Install Apache2
+      apt:
+        name: apache2
+        state: present   ← "ensure it is installed"
+
+  If Apache is already installed: Ansible skips the task (no change).
+  If Apache is not installed: Ansible installs it.
+  Running this 100 times = same result: Apache is installed.
+
+  This is important because if a Jenkins build runs again (e.g., due
+  to a retry), it won't break an already-working deployment.
+
+──────────────────────────────────────────────────────────────
+
+Q11. What is the difference between "state: restarted" and
+     "state: reloaded" in Ansible for services?
+──────────────────────────────────────────────────────────────
+  state: restarted → Completely stops the service, then starts it.
+                     All connections are dropped. Config fully reloaded.
+                     Use for major config changes.
+
+  state: reloaded  → Sends SIGHUP signal to reload configuration files
+                     WITHOUT stopping the service. Existing connections
+                     are maintained. Faster and less disruptive.
+                     Use for minor config changes (e.g., adding a vhost).
+
+  In our project, we use handlers with "restart apache" which uses
+  systemd restart — we chose this for reliability in a lab environment.
+
+──────────────────────────────────────────────────────────────
+
+Q12. What are Ansible Handlers and when do they run?
+─────────────────────────────────────────────────────
+  Handlers are special tasks that only run when "notified" by another
+  task. They run only ONCE at the END of the play, even if notified
+  multiple times.
+
+  Example in our playbook:
+    tasks:
+      - name: Install Apache
+        apt: ...
+        notify: restart apache   ← notifies the handler
+
+      - name: Copy config
+        copy: ...
+        notify: restart apache   ← also notifies (same handler)
+
+    handlers:
+      - name: restart apache     ← runs ONCE at end, not twice!
+        systemd:
+          name: apache2
+          state: restarted
+
+  WHY: If 3 tasks all notify "restart apache", Apache restarts once
+  (not 3 times), which is more efficient and avoids downtime.
+
+═══════════════════════════════════════════════════════════════
+  SECTION C: ADVANCED QUESTIONS
+═══════════════════════════════════════════════════════════════
+
+Q13. What is Blue-Green Deployment?
+─────────────────────────────────────
+  Blue-Green deployment is a release strategy that reduces downtime
+  and risk by running two identical production environments:
+  • Blue: current live version
+  • Green: new version being deployed
+
+  Process:
+  1. Users are hitting Blue (currently live)
+  2. Deploy new version to Green (idle environment)
+  3. Test Green thoroughly
+  4. Switch the load balancer to point to Green
+  5. Blue becomes idle (instant rollback available)
+
+  Benefits: Zero downtime, instant rollback by switching back to Blue.
+
+──────────────────────────────────────────────────────────────
+
+Q14. How would you implement rollback in this project?
+───────────────────────────────────────────────────────
+  Our project includes a rollback.yml playbook that:
+
+  1. Lists all backups in /var/backups/website/
+  2. Identifies the target backup (latest or specific build number)
+  3. Removes current files from /var/www/html/
+  4. Extracts the backup archive
+  5. Fixes permissions
+  6. Restarts Apache
+
+  Trigger rollback:
+    ansible-playbook -i inventory.ini rollback.yml
+    ansible-playbook -i inventory.ini rollback.yml \
+      --extra-vars "rollback_build=40"
+
+  In Jenkins: Add a "Rollback" pipeline that can be triggered manually.
+
+──────────────────────────────────────────────────────────────
+
+Q15. What is Docker and how does it fit into this project?
+───────────────────────────────────────────────────────────
+  Docker is a platform for developing and running applications in
+  containers — lightweight, isolated environments that include all
+  dependencies.
+
+  In our project (optional):
+  • Dockerfile defines the container image (FROM httpd:2.4-alpine)
+  • Our website files are COPY-ed into the Apache container image
+  • Container is built by Jenkins/Ansible and run on the server
+  • Benefits: Consistent environment, easy to scale, no "works on
+    my machine" problems
+
+  docker build -t devops-website .
+  docker run -d -p 80:80 devops-website
+
+──────────────────────────────────────────────────────────────
+
+Q16. How is this project different from manual deployment?
+───────────────────────────────────────────────────────────
+  Manual Deployment:
+  • Developer manually SSHes to server after every change
+  • Human error risk (wrong files, wrong directory)
+  • Time-consuming (5–15 minutes per deploy)
+  • No audit trail of what was deployed when
+  • No automated testing before deploy
+
+  Automated CI/CD (This Project):
+  • One git push triggers everything automatically
+  • Zero human error in the deployment process
+  • Takes under 60 seconds from push to live
+  • Full audit log in Jenkins (who pushed, what changed, build status)
+  • Tests run before every deployment
+  • Same process every time — repeatable and reliable
+
+──────────────────────────────────────────────────────────────
+
+Q17. What security considerations did you take in this project?
+────────────────────────────────────────────────────────────────
+  1. SSH Key Authentication: No passwords used; private key secured
+  2. Jenkins Credentials Manager: Keys stored encrypted, not in code
+  3. UFW Firewall: Only required ports (22, 80, 8080) are open
+  4. Least Privilege: Ansible runs as ubuntu user, not root
+     (become: yes only when needed)
+  5. GitHub Webhook Secret: Can be added to verify request origin
+  6. No plain-text passwords in inventory or playbooks
+  7. Host key checking disabled only in dev (should be on in prod)
+  8. Apache security headers enabled via mod_headers
+
+──────────────────────────────────────────────────────────────
+
+Q18. What is the difference between Ansible and Chef/Puppet?
+─────────────────────────────────────────────────────────────
+  ┌──────────────┬───────────────────┬──────────────┬──────────────┐
+  │ Feature      │ Ansible           │ Chef         │ Puppet       │
+  ├──────────────┼───────────────────┼──────────────┼──────────────┤
+  │ Agent        │ Agentless (SSH)   │ Agent needed │ Agent needed │
+  │ Language     │ YAML              │ Ruby DSL     │ Puppet DSL   │
+  │ Learning     │ Easy              │ Hard         │ Medium       │
+  │ Architecture │ Push-based        │ Pull-based   │ Pull-based   │
+  │ Setup        │ Minutes           │ Hours        │ Hours        │
+  └──────────────┴───────────────────┴──────────────┴──────────────┘
+
+  Ansible is chosen for this project due to its simplicity, agentless
+  architecture, and YAML syntax that is readable even by beginners.
+
+═══════════════════════════════════════════════════════════════
+  SECTION D: QUICK-FIRE QUESTIONS
+═══════════════════════════════════════════════════════════════
+
+Q: What port does Jenkins run on by default?  → 8080
+Q: What is the Jenkins workspace directory?   → /var/lib/jenkins/workspace/
+Q: What language is Ansible written in?       → Python
+Q: What is /var/www/html?                     → Apache's default web root
+Q: What command tests Ansible connectivity?   → ansible all -m ping
+Q: What is "become: yes" in Ansible?          → Equivalent to sudo
+Q: What file defines pipeline stages?         → Jenkinsfile
+Q: What protocol does Ansible use?            → SSH (port 22)
+Q: Full form of YAML?                         → YAML Ain't Markup Language
+Q: What is a Jenkins slave/agent?             → A worker machine that runs builds
+Q: What is git webhook payload URL format?    → http://IP:8080/github-webhook/
+Q: Command to check Apache config syntax?     → apache2ctl configtest
+Q: What is "notify" used for in Ansible?      → To trigger handlers
+Q: What is the default SSH port?              → 22
+Q: What does "state: present" mean in apt?    → Ensure package is installed

@@ -1,0 +1,230 @@
+---
+# ============================================================
+#  Ansible Playbook — Automated Website Deployment
+#  File   : ansible/deploy.yml
+#  Runs on: webservers group (defined in inventory.ini)
+# ============================================================
+
+- name: "🚀 Deploy Website to Apache Web Server"
+  hosts: webservers
+  become: yes           # Run tasks as sudo/root
+  gather_facts: yes     # Collect system info (OS, IP, etc.)
+
+  # ── Variables ─────────────────────────────────────────────
+  vars:
+    web_root: /var/www/html
+    website_src: "{{ playbook_dir }}/../website/"
+    apache_service: apache2
+    backup_dir: /var/backups/website
+    build_number: "{{ build_number | default('manual') }}"
+    deploy_time: "{{ deploy_time | default(ansible_date_time.iso8601) }}"
+
+  # ════════════════════════════════════════════════════════
+  #  PRE-TASKS: Run before main tasks
+  # ════════════════════════════════════════════════════════
+  pre_tasks:
+
+    - name: "📋 Display deployment info"
+      debug:
+        msg:
+          - "=========================================="
+          - " Target Host : {{ inventory_hostname }}"
+          - " Host IP     : {{ ansible_host }}"
+          - " OS          : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - " Build #     : {{ build_number }}"
+          - " Deploy Time : {{ deploy_time }}"
+          - "=========================================="
+
+    - name: "📦 Update apt cache"
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600    # Only update if cache is older than 1 hour
+      when: ansible_os_family == "Debian"
+
+  # ════════════════════════════════════════════════════════
+  #  MAIN TASKS
+  # ════════════════════════════════════════════════════════
+  tasks:
+
+    # ── 1. Install Apache ──────────────────────────────────
+    - name: "🔧 Install Apache2 web server"
+      apt:
+        name:
+          - apache2
+          - apache2-utils
+        state: present
+      notify: restart apache
+
+    # ── 2. Ensure Apache is running ────────────────────────
+    - name: "▶️  Ensure Apache2 is started and enabled"
+      systemd:
+        name: "{{ apache_service }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    # ── 3. Create backup of existing website ──────────────
+    - name: "💾 Create backup directory"
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: "💾 Backup existing website (if exists)"
+      archive:
+        path: "{{ web_root }}"
+        dest: "{{ backup_dir }}/website_backup_{{ build_number }}_{{ ansible_date_time.epoch }}.tar.gz"
+        format: gz
+      ignore_errors: yes    # Don't fail if nothing to backup
+
+    # ── 4. Clean old files ────────────────────────────────
+    - name: "🧹 Remove old website files from web root"
+      file:
+        path: "{{ web_root }}/{{ item }}"
+        state: absent
+      loop:
+        - "*.html"
+        - "css"
+        - "js"
+        - "images"
+      ignore_errors: yes
+
+    # ── 5. Copy website files ─────────────────────────────
+    - name: "📂 Copy website files to Apache web root"
+      copy:
+        src: "{{ website_src }}"
+        dest: "{{ web_root }}/"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+        directory_mode: '0755'
+
+    # ── 6. Set correct permissions ────────────────────────
+    - name: "🔐 Set correct file permissions on web root"
+      file:
+        path: "{{ web_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+        recurse: yes
+
+    # ── 7. Configure Apache virtual host ──────────────────
+    - name: "⚙️  Write Apache VirtualHost configuration"
+      copy:
+        dest: /etc/apache2/sites-available/website.conf
+        content: |
+          <VirtualHost *:80>
+              ServerAdmin webmaster@localhost
+              DocumentRoot {{ web_root }}
+              ServerName {{ ansible_host }}
+
+              <Directory {{ web_root }}>
+                  Options -Indexes +FollowSymLinks
+                  AllowOverride All
+                  Require all granted
+              </Directory>
+
+              ErrorLog  ${APACHE_LOG_DIR}/website_error.log
+              CustomLog ${APACHE_LOG_DIR}/website_access.log combined
+          </VirtualHost>
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart apache
+
+    # ── 8. Enable the site ────────────────────────────────
+    - name: "🌐 Enable website virtual host"
+      command: a2ensite website.conf
+      notify: restart apache
+      changed_when: true
+
+    - name: "🌐 Disable default Apache site"
+      command: a2dissite 000-default.conf
+      notify: restart apache
+      ignore_errors: yes
+      changed_when: true
+
+    # ── 9. Enable required Apache modules ─────────────────
+    - name: "🔧 Enable Apache modules"
+      apache2_module:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - rewrite
+        - headers
+      notify: restart apache
+
+    # ── 10. Write deployment info file ────────────────────
+    - name: "📄 Write deployment info to web root"
+      copy:
+        dest: "{{ web_root }}/deploy-info.txt"
+        content: |
+          Deployment Information
+          ======================
+          Build Number  : {{ build_number }}
+          Deploy Time   : {{ deploy_time }}
+          Deployed By   : Jenkins + Ansible
+          Target Host   : {{ inventory_hostname }} ({{ ansible_host }})
+          OS            : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Apache Version: {{ ansible_facts['packages']['apache2'][0]['version'] | default('installed') }}
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      ignore_errors: yes
+
+    # ── 11. Verify Apache config ──────────────────────────
+    - name: "✅ Validate Apache configuration syntax"
+      command: apache2ctl configtest
+      register: apache_config_test
+      changed_when: false
+      failed_when: "'Syntax OK' not in apache_config_test.stderr"
+
+    - name: "📋 Show Apache config test result"
+      debug:
+        msg: "Apache config: {{ apache_config_test.stderr }}"
+
+  # ════════════════════════════════════════════════════════
+  #  HANDLERS: Run only when notified by tasks
+  # ════════════════════════════════════════════════════════
+  handlers:
+
+    - name: restart apache
+      systemd:
+        name: "{{ apache_service }}"
+        state: restarted
+        daemon_reload: yes
+
+  # ════════════════════════════════════════════════════════
+  #  POST-TASKS: Verification after main tasks
+  # ════════════════════════════════════════════════════════
+  post_tasks:
+
+    - name: "⏳ Wait for Apache to fully start"
+      wait_for:
+        port: 80
+        host: localhost
+        delay: 2
+        timeout: 30
+
+    - name: "🌐 Verify website is accessible (HTTP check)"
+      uri:
+        url: "http://localhost"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: website_check
+      ignore_errors: yes
+
+    - name: "📊 Deployment Summary"
+      debug:
+        msg:
+          - "=========================================="
+          - " ✅  DEPLOYMENT SUCCESSFUL"
+          - " Host     : {{ inventory_hostname }}"
+          - " URL      : http://{{ ansible_host }}"
+          - " Status   : {{ website_check.status | default('N/A') }}"
+          - " Build #  : {{ build_number }}"
+          - "=========================================="

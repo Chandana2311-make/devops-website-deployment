@@ -1,0 +1,94 @@
+---
+# ============================================================
+#  Ansible Playbook — Docker Deployment (Optional Advanced)
+#  File: ansible/docker-deploy.yml
+#  Usage: ansible-playbook -i inventory.ini docker-deploy.yml
+# ============================================================
+
+- name: "🐳 Deploy Website via Docker"
+  hosts: webservers
+  become: yes
+  gather_facts: yes
+
+  vars:
+    image_name: devops-website
+    container_name: devops_website
+    host_port: 80
+    container_port: 80
+    build_context: "{{ playbook_dir }}/.."
+
+  tasks:
+
+    - name: "📦 Install Docker dependencies"
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+        state: present
+        update_cache: yes
+
+    - name: "🔑 Add Docker GPG key"
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: "📋 Add Docker repository"
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: "🐳 Install Docker CE"
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+
+    - name: "▶️  Start and enable Docker"
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: "📦 Install Docker Python SDK (for Ansible Docker modules)"
+      pip:
+        name: docker
+        state: present
+
+    - name: "🏗️  Build Docker image"
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        build:
+          path: "{{ build_context }}"
+        source: build
+        force_source: yes
+      register: build_result
+
+    - name: "🛑 Stop existing container (if running)"
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: "🚀 Run new Docker container"
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ host_port }}:{{ container_port }}"
+        labels:
+          project: "devops-mini"
+          build: "{{ build_number | default('manual') }}"
+
+    - name: "✅ Verify container is running"
+      community.docker.docker_container_info:
+        name: "{{ container_name }}"
+      register: container_info
+
+    - name: "📊 Show container status"
+      debug:
+        msg: "Container {{ container_name }} is {{ container_info.container.State.Status }}"

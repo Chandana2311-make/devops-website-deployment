@@ -1,0 +1,36 @@
+# Ansible sensitive files (never commit private keys!)
+ansible/secrets/
+*.pem
+*.key
+*id_rsa*
+!*id_rsa.pub
+
+# Ansible retry files
+*.retry
+
+# Jenkins local workspace
+.jenkins/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/settings.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+logs/
+
+# Backups
+*.backup
+backups/
+
+# Node (if any)
+node_modules/
+npm-debug.log
+
+# Environment files
+.env
+.env.local

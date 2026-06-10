@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DevOps Portfolio | CI/CD Pipeline Demo</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <i class="fas fa-infinity"></i> DevOps Pipeline
+    </div>
+    <ul class="nav-links">
+      <li><a href="#home">Home</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#stack">Tech Stack</a></li>
+      <li><a href="#deploy">Deploy</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="hero-content">
+      <div class="badge">🚀 Automated CI/CD Pipeline</div>
+      <h1>Jenkins + Ansible<br><span class="gradient-text">Automated Deployment</span></h1>
+      <p>Every code push triggers an automated pipeline that deploys this website instantly to the Apache server using Jenkins and Ansible.</p>
+      <div class="hero-buttons">
+        <a href="#pipeline" class="btn btn-primary">View Pipeline</a>
+        <a href="#stack" class="btn btn-outline">Tech Stack</a>
+      </div>
+      <div class="deploy-status">
+        <span class="status-dot"></span>
+        <span id="deploy-text">Pipeline Active — Last deployed: <span id="deploy-time"></span></span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="pipeline-visual">
+        <div class="pipe-step active" data-step="1">
+          <i class="fab fa-github"></i>
+          <span>GitHub</span>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="2">
+          <i class="fab fa-jenkins"></i>
+          <span>Jenkins</span>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="3">
+          <i class="fas fa-robot"></i>
+          <span>Ansible</span>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="4">
+          <i class="fas fa-server"></i>
+          <span>Apache</span>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="5">
+          <i class="fas fa-globe"></i>
+          <span>Live!</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pipeline Section -->
+  <section class="section" id="pipeline">
+    <div class="container">
+      <h2 class="section-title">CI/CD Pipeline Flow</h2>
+      <p class="section-subtitle">Fully automated from commit to deployment</p>
+      <div class="pipeline-steps">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <div class="step-icon"><i class="fas fa-code-commit"></i></div>
+          <h3>Code Push</h3>
+          <p>Developer pushes code to GitHub repository. Webhook is triggered instantly.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <div class="step-icon"><i class="fab fa-jenkins"></i></div>
+          <h3>Jenkins Build</h3>
+          <p>Jenkins detects the webhook, pulls the latest code, and starts the build pipeline.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <div class="step-icon"><i class="fas fa-vial"></i></div>
+          <h3>Testing</h3>
+          <p>Automated tests run to validate code quality and functionality before deployment.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">04</div>
+          <div class="step-icon"><i class="fas fa-rocket"></i></div>
+          <h3>Ansible Deploy</h3>
+          <p>Ansible playbook copies files to /var/www/html and restarts Apache2 automatically.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">05</div>
+          <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+          <h3>Live Website</h3>
+          <p>Website is live! Build status notification sent. Total time: under 60 seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack Section -->
+  <section class="section dark-section" id="stack">
+    <div class="container">
+      <h2 class="section-title">Technology Stack</h2>
+      <p class="section-subtitle">Industry-standard tools used in this project</p>
+      <div class="tech-grid">
+        <div class="tech-card">
+          <i class="fab fa-ubuntu" style="color:#E95420"></i>
+          <h3>Ubuntu Linux</h3>
+          <p>Host OS for Jenkins &amp; deployment target server</p>
+          <span class="tech-tag">OS</span>
+        </div>
+        <div class="tech-card">
+          <i class="fab fa-github" style="color:#fff"></i>
+          <h3>Git &amp; GitHub</h3>
+          <p>Version control with webhook integration</p>
+          <span class="tech-tag">VCS</span>
+        </div>
+        <div class="tech-card">
+          <i class="fab fa-jenkins" style="color:#D33833"></i>
+          <h3>Jenkins</h3>
+          <p>CI/CD automation server with pipeline support</p>
+          <span class="tech-tag">CI/CD</span>
+        </div>
+        <div class="tech-card">
+          <i class="fas fa-robot" style="color:#EE0000"></i>
+          <h3>Ansible</h3>
+          <p>Agentless configuration management &amp; deployment</p>
+          <span class="tech-tag">IaC</span>
+        </div>
+        <div class="tech-card">
+          <i class="fas fa-server" style="color:#CA4245"></i>
+          <h3>Apache2</h3>
+          <p>Web server hosting the deployed website</p>
+          <span class="tech-tag">Web Server</span>
+        </div>
+        <div class="tech-card">
+          <i class="fab fa-docker" style="color:#2496ED"></i>
+          <h3>Docker</h3>
+          <p>Optional containerized deployment support</p>
+          <span class="tech-tag">Optional</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deployment Environments -->
+  <section class="section" id="deploy">
+    <div class="container">
+      <h2 class="section-title">Deployment Environments</h2>
+      <p class="section-subtitle">Deploy to any environment with zero changes</p>
+      <div class="env-grid">
+        <div class="env-card">
+          <div class="env-icon"><i class="fas fa-laptop-code"></i></div>
+          <h3>Local Ubuntu VM</h3>
+          <ul>
+            <li>VirtualBox / VMware</li>
+            <li>Private IP networking</li>
+            <li>Perfect for testing</li>
+            <li>No cloud costs</li>
+          </ul>
+          <span class="env-badge local">Local</span>
+        </div>
+        <div class="env-card featured">
+          <div class="env-icon"><i class="fab fa-aws"></i></div>
+          <h3>AWS EC2</h3>
+          <ul>
+            <li>t2.micro (Free Tier)</li>
+            <li>Security Groups for ports</li>
+            <li>Elastic IP support</li>
+            <li>Industry standard</li>
+          </ul>
+          <span class="env-badge aws">AWS</span>
+        </div>
+        <div class="env-card">
+          <div class="env-icon"><i class="fab fa-microsoft"></i></div>
+          <h3>Azure VM</h3>
+          <ul>
+            <li>B1s (Free Tier)</li>
+            <li>NSG port configuration</li>
+            <li>Azure DNS support</li>
+            <li>Enterprise ready</li>
+          </ul>
+          <span class="env-badge azure">Azure</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Counter -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-number" data-target="60">0</div>
+          <div class="stat-label">Seconds to Deploy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" data-target="100">0</div>
+          <div class="stat-label">% Automated</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" data-target="0">0</div>
+          <div class="stat-label">Manual Steps</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" data-target="5">0</div>
+          <div class="stat-label">Pipeline Stages</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="section" id="contact">
+    <div class="container">
+      <h2 class="section-title">Project Info</h2>
+      <div class="contact-card">
+        <div class="contact-info">
+          <h3>DevOps Mini Project</h3>
+          <p>Automated Website Deployment Using Jenkins + Ansible</p>
+          <p><i class="fas fa-university"></i> Computer Science &amp; Engineering Department</p>
+          <p><i class="fas fa-calendar"></i> Academic Year 2024–25</p>
+          <div class="contact-links">
+            <a href="#" class="contact-btn"><i class="fab fa-github"></i> GitHub Repo</a>
+            <a href="#" class="contact-btn"><i class="fas fa-file-alt"></i> Project Report</a>
+          </div>
+        </div>
+        <div class="qr-placeholder">
+          <i class="fas fa-qrcode"></i>
+          <span>Scan to view live</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p><i class="fas fa-infinity"></i> Automated Deployment — Deployed via Jenkins + Ansible CI/CD Pipeline</p>
+      <p class="footer-sub">Build #<span id="build-num">42</span> | Apache2 on Ubuntu | <span id="footer-time"></span></p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

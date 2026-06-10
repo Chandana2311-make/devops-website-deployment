@@ -1,0 +1,96 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "files.associations": {
+      "*.yml": "yaml",
+      "*.yaml": "yaml",
+      "Jenkinsfile": "groovy",
+      "inventory.ini": "ini",
+      "*.conf": "apache"
+    },
+    "yaml.schemas": {
+      "https://json.schemastore.org/ansible-playbook.json": ["ansible/*.yml"]
+    },
+    "editor.formatOnSave": true,
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "workbench.colorTheme": "Default Dark Modern",
+    "editor.fontSize": 14,
+    "editor.wordWrap": "on"
+  },
+  "extensions": {
+    "recommendations": [
+      "redhat.ansible",
+      "redhat.vscode-yaml",
+      "ms-azuretools.vscode-docker",
+      "github.vscode-github-actions",
+      "gruntfuggly.todo-tree",
+      "pkief.material-icon-theme",
+      "formulahendry.auto-rename-tag",
+      "esbenp.prettier-vscode"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Ansible: Ping Servers",
+        "type": "shell",
+        "command": "ansible webservers -i ansible/inventory.ini -m ping",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Ansible: Deploy Website",
+        "type": "shell",
+        "command": "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -v",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Ansible: Dry Run",
+        "type": "shell",
+        "command": "ansible-playbook -i ansible/inventory.ini ansible/deploy.yml --check -v",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Ansible: Rollback",
+        "type": "shell",
+        "command": "ansible-playbook -i ansible/inventory.ini ansible/rollback.yml",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Build Image",
+        "type": "shell",
+        "command": "docker build -t devops-website .",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Run Container",
+        "type": "shell",
+        "command": "docker run -d -p 80:80 --name devops_website devops-website",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Open Website (localhost)",
+        "type": "shell",
+        "command": "xdg-open http://localhost || open http://localhost",
+        "group": "test",
+        "problemMatcher": []
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": []
+  }
+}

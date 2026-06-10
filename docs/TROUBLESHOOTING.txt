@@ -1,0 +1,291 @@
+# ============================================================
+#  TROUBLESHOOTING GUIDE
+#  Project: Jenkins + Ansible CI/CD Pipeline
+# ============================================================
+
+═══════════════════════════════════════════════════════════════
+  JENKINS TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+PROBLEM 1: Jenkins won't start
+─────────────────────────────
+  Symptoms: systemctl status jenkins shows "failed"
+  
+  Commands to diagnose:
+    sudo systemctl status jenkins
+    sudo journalctl -u jenkins -n 50
+  
+  Solutions:
+    # Check Java is installed:
+    java -version
+    
+    # Check port 8080 not already in use:
+    sudo ss -tlnp | grep 8080
+    sudo lsof -i :8080
+    
+    # Restart Jenkins:
+    sudo systemctl restart jenkins
+    
+    # Fix Java path if needed:
+    sudo update-alternatives --config java
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 2: Jenkins web UI shows 403 Forbidden
+─────────────────────────────────────────────
+  Symptoms: Browser shows 403 at http://IP:8080
+
+  Solutions:
+    # Disable security temporarily (only for testing!):
+    sudo nano /var/lib/jenkins/config.xml
+    # Change: <useSecurity>true</useSecurity>
+    #     to: <useSecurity>false</useSecurity>
+    sudo systemctl restart jenkins
+    
+    # Better fix: Get admin password again:
+    sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 3: GitHub Webhook Not Triggering Jenkins
+────────────────────────────────────────────────
+  Symptoms: Push to GitHub, Jenkins doesn't start a build
+
+  Diagnose:
+    # Check Jenkins URL is correct in System Configuration
+    # Go to: Manage Jenkins → System → Jenkins URL
+    # Must match what you put in GitHub webhook exactly
+    
+    # Check GitHub webhook delivery:
+    # GitHub → Repo → Settings → Webhooks → Click webhook → Recent Deliveries
+    # Look for red X (failed) or green check (success)
+  
+  Solutions:
+    # If Jenkins is behind NAT (home network):
+    # Use ngrok to expose Jenkins publicly:
+    ngrok http 8080
+    # Use the ngrok URL in GitHub webhook instead
+    
+    # Check firewall allows inbound on 8080:
+    sudo ufw allow 8080/tcp
+    
+    # Verify GitHub plugin is installed in Jenkins:
+    # Manage Jenkins → Plugins → Installed → search "GitHub"
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 4: Pipeline Stage Fails with "Permission Denied"
+────────────────────────────────────────────────────────
+  Symptoms: Build fails at Execute shell stage with permission error
+
+  Solutions:
+    # Give jenkins user sudo (temporary for testing):
+    sudo visudo
+    # Add line: jenkins ALL=(ALL) NOPASSWD: ALL
+    
+    # Or add jenkins to specific groups:
+    sudo usermod -aG sudo jenkins
+    sudo usermod -aG www-data jenkins
+    
+    # Restart Jenkins after group changes:
+    sudo systemctl restart jenkins
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 5: Build Says "ansible: command not found"
+──────────────────────────────────────────────────
+  Symptoms: Jenkins can't find ansible binary
+
+  Solutions:
+    # Find where ansible is installed:
+    which ansible
+    # Usually: /usr/bin/ansible
+    
+    # Add to Jenkins PATH - in Jenkinsfile add:
+    environment {
+        PATH = "/usr/local/bin:/usr/bin:/bin:${env.PATH}"
+    }
+    
+    # Or install ansible globally (not in virtualenv):
+    sudo apt install -y ansible
+    
+    # Verify Jenkins user can run ansible:
+    sudo su - jenkins -c "ansible --version"
+
+═══════════════════════════════════════════════════════════════
+  ANSIBLE TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+PROBLEM 6: SSH Connection Refused / Timeout
+──────────────────────────────────────────
+  Symptoms: ansible ping fails, "Connection refused" or "Timeout"
+
+  Diagnose:
+    # Test basic SSH manually:
+    ssh ubuntu@192.168.1.100
+    
+    # Test with verbose SSH:
+    ssh -vvv ubuntu@192.168.1.100
+    
+    # Test Ansible with verbose:
+    ansible webservers -i inventory.ini -m ping -vvv
+  
+  Solutions:
+    # Verify SSH service is running on deployment server:
+    sudo systemctl status ssh
+    sudo systemctl start ssh
+    
+    # Check firewall on deployment server:
+    sudo ufw status
+    sudo ufw allow 22/tcp
+    
+    # Verify IP address in inventory.ini is correct:
+    ping 192.168.1.100
+    
+    # Check if you can reach the port:
+    nc -zv 192.168.1.100 22
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 7: Passwordless SSH Not Working
+────────────────────────────────────────
+  Symptoms: Ansible still asks for password
+
+  Solutions:
+    # On the JENKINS server, as jenkins user:
+    sudo su - jenkins
+    
+    # Check key exists:
+    ls -la ~/.ssh/
+    # Should see: id_rsa (private) and id_rsa.pub (public)
+    
+    # Check authorized_keys on DEPLOYMENT server:
+    ssh ubuntu@192.168.1.100
+    cat ~/.ssh/authorized_keys
+    # Jenkins public key should be here
+    
+    # Fix permissions on deployment server:
+    chmod 700 ~/.ssh
+    chmod 600 ~/.ssh/authorized_keys
+    
+    # Re-copy key if needed:
+    ssh-copy-id ubuntu@192.168.1.100
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 8: Ansible "Become" (sudo) Password Required
+─────────────────────────────────────────────────────
+  Symptoms: Playbook fails at tasks needing sudo (apt install, etc.)
+
+  Solutions:
+    # Allow ubuntu user passwordless sudo on deployment server:
+    sudo visudo
+    # Add: ubuntu ALL=(ALL) NOPASSWD: ALL
+    
+    # Or create a sudoers file:
+    echo "ubuntu ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/ubuntu
+    sudo chmod 440 /etc/sudoers.d/ubuntu
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 9: Ansible "Unable to locate package apache2"
+──────────────────────────────────────────────────────
+  Symptoms: apt module fails to install apache2
+
+  Solutions:
+    # Update apt cache in playbook (already in our deploy.yml):
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    
+    # Or manually on deployment server:
+    sudo apt update
+    sudo apt install -y apache2
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 10: Website Shows Old Content After Deploy
+──────────────────────────────────────────────────
+  Symptoms: Apache serves old website even after deployment
+
+  Solutions:
+    # Hard refresh browser: Ctrl+Shift+R (clears cache)
+    
+    # Verify files were actually copied:
+    ansible webservers -i inventory.ini -m shell \
+      -a "ls -la /var/www/html/ && cat /var/www/html/index.html | head -5"
+    
+    # Restart Apache manually:
+    ansible webservers -i inventory.ini -m service \
+      -a "name=apache2 state=restarted"
+    
+    # Check Apache is serving correct document root:
+    ansible webservers -i inventory.ini -m shell \
+      -a "cat /etc/apache2/sites-enabled/*.conf"
+
+═══════════════════════════════════════════════════════════════
+  APACHE TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+PROBLEM 11: Apache Shows Default Page Instead of Website
+─────────────────────────────────────────────────────────
+  Solutions:
+    # Check if files are in right location:
+    ls -la /var/www/html/
+    
+    # Check Apache site config:
+    sudo apache2ctl -S
+    
+    # Check enabled sites:
+    ls /etc/apache2/sites-enabled/
+    
+    # Disable default site, enable yours:
+    sudo a2dissite 000-default.conf
+    sudo a2ensite website.conf
+    sudo systemctl reload apache2
+
+──────────────────────────────────────────────────────────────
+
+PROBLEM 12: Port 80 Already in Use
+────────────────────────────────────
+  Solutions:
+    # Find what's using port 80:
+    sudo ss -tlnp | grep :80
+    sudo lsof -i :80
+    
+    # Stop conflicting service (e.g., nginx):
+    sudo systemctl stop nginx
+    sudo systemctl disable nginx
+    
+    # Then start Apache:
+    sudo systemctl start apache2
+
+═══════════════════════════════════════════════════════════════
+  USEFUL DIAGNOSTIC COMMANDS SUMMARY
+═══════════════════════════════════════════════════════════════
+
+  # Jenkins
+  sudo systemctl status jenkins
+  sudo journalctl -u jenkins -f
+  sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+  # Ansible
+  ansible --version
+  ansible webservers -i inventory.ini -m ping
+  ansible-playbook -i inventory.ini deploy.yml --check -v
+  ansible-playbook -i inventory.ini deploy.yml -vvvv
+
+  # Apache
+  sudo systemctl status apache2
+  sudo apache2ctl configtest
+  sudo apache2ctl -S
+  sudo tail -f /var/log/apache2/error.log
+
+  # Network
+  sudo ufw status verbose
+  sudo ss -tlnp
+  curl -I http://DEPLOYMENT_IP
+
+  # SSH
+  ssh -vvv ubuntu@DEPLOYMENT_IP
+  sudo su - jenkins -c "ssh ubuntu@DEPLOYMENT_IP echo OK"
