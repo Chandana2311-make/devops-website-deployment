@@ -11,7 +11,7 @@ pipeline {
 
     // ── Environment Variables ──────────────────────────────
     environment {
-        REPO_URL        = 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+        REPO_URL        = 'https://github.com/Chandana2311-make/devops-website-deployment.git'
         BRANCH          = 'main'
         ANSIBLE_DIR     = "${WORKSPACE}/ansible"
         INVENTORY_FILE  = "${WORKSPACE}/ansible/inventory.ini"
